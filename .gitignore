@@ -1,5 +1,18 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Supabase local config with secrets
+supabase/config.toml
+supabase/.env
+
+# Google OAuth client secret files
+client_secret*.json
+
+# IDE
+.idea/
+
+# Claude Code memory
+.claude/
+
 # dependencies
 /node_modules
 /.pnp
