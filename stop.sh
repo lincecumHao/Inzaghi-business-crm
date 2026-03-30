@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# ── 停止 Supabase ─────────────────────────────────────────────
+echo "⏳ 停止 Supabase..."
+supabase stop
+echo "✅ Supabase 已停止"
+
+# ── 停止 Docker Desktop ───────────────────────────────────────
+echo "⏳ 停止 Docker Desktop..."
+osascript -e 'quit app "Docker Desktop"'
+echo "✅ Docker Desktop 已停止"
