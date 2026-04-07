@@ -3,6 +3,8 @@
 # Supabase local config with secrets
 supabase/config.toml
 supabase/.env
+supabase/.temp/
+supabase/.branches/
 
 # Google OAuth client secret files
 client_secret*.json
