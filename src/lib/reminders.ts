@@ -55,7 +55,7 @@ export async function processReminders(systemUrl: string, debug = false, force =
   if (debug) result.debugLog = []
 
   for (const order of orders ?? []) {
-    const customer = order.customer as {
+    const customer = order.customer as unknown as {
       id: string
       company_name: string
       reminder_months_before: number

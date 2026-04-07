@@ -55,7 +55,7 @@ export default async function CommissionsPage({
 
   // 過濾掉停用的訂單
   const activeSchedules = (schedules ?? []).filter((s) => {
-    const order = s.order as { is_active: boolean } | null
+    const order = s.order as unknown as { is_active: boolean } | null
     return order?.is_active !== false
   })
 
@@ -118,8 +118,8 @@ export default async function CommissionsPage({
                   return (
                     <Fragment key={date}>
                       {dateSchedules.map((s) => {
-                        const order = s.order as { quote_number: string; customer: { company_name: string } | null } | null
-                        const items = s.items as Array<{
+                        const order = s.order as unknown as { quote_number: string; is_active: boolean; customer: { company_name: string } | null } | null
+                        const items = s.items as unknown as Array<{
                           commission_amount: number
                           item_subtotal: number
                           order_item: { name: string } | null

@@ -14,9 +14,16 @@ import { processReminders } from '@/lib/reminders'
  *   在 vercel.json 設定每天執行一次，帶 CRON_SECRET。
  */
 export async function GET(req: NextRequest) {
+  // 手動觸發：?secret=REMINDER_SECRET
+  // Vercel Cron 自動觸發：Authorization: Bearer CRON_SECRET
   const secret = req.nextUrl.searchParams.get('secret')
+  const authHeader = req.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
 
-  if (!process.env.REMINDER_SECRET || secret !== process.env.REMINDER_SECRET) {
+  const validManual = process.env.REMINDER_SECRET && secret === process.env.REMINDER_SECRET
+  const validCron = cronSecret && authHeader === `Bearer ${cronSecret}`
+
+  if (!validManual && !validCron) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
