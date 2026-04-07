@@ -5,6 +5,7 @@ export interface Customer {
   address: string | null
   reminder_months_before: number
   parent_id: string | null
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -24,10 +25,14 @@ export interface Order {
   customer_id: string
   quote_number: string
   quote_date: string
-  quote_valid_until: string | null
+  invoice_date: string | null
   contract_start_date: string | null
   contract_end_date: string | null
   is_main_contract: boolean
+  is_active: boolean
+  quote_url: string | null
+  contract_url: string | null
+  invoice_url: string | null
   status: 'pending' | 'quote_issued' | 'invoice_issued' | 'paid'
   payment_date: string | null
   commission_year: number | null

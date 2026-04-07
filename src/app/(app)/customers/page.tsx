@@ -7,9 +7,10 @@ import { CustomerSearch } from './_components/CustomerSearch'
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; inactive?: string }>
 }) {
-  const { q } = await searchParams
+  const { q, inactive } = await searchParams
+  const showInactive = inactive === '1'
   const supabase = await createClient()
 
   let query = supabase
@@ -17,9 +18,8 @@ export default async function CustomersPage({
     .select('*, contacts(id), subsidiaries:customers!parent_id(id)')
     .order('company_name')
 
-  if (q) {
-    query = query.or(`company_name.ilike.%${q}%,tax_id.ilike.%${q}%`)
-  }
+  if (!showInactive) query = query.eq('is_active', true)
+  if (q) query = query.or(`company_name.ilike.%${q}%,tax_id.ilike.%${q}%`)
 
   const { data: allCustomers } = await query
 
@@ -39,6 +39,18 @@ export default async function CustomersPage({
         <Suspense>
           <CustomerSearch />
         </Suspense>
+        <Link
+          href={showInactive
+            ? (q ? `/customers?q=${q}` : '/customers')
+            : (q ? `/customers?q=${q}&inactive=1` : '/customers?inactive=1')}
+          className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+            showInactive
+              ? 'bg-slate-700 text-white border-slate-700'
+              : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          顯示停用
+        </Link>
         {q && (
           <span className="text-sm text-slate-500">
             找到 {displayed.length} 筆結果
@@ -72,10 +84,15 @@ export default async function CustomersPage({
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/customers/${c.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                          className={`font-medium hover:underline ${c.is_active ? 'text-blue-600 hover:text-blue-700' : 'text-slate-400 hover:text-slate-500'}`}
                         >
                           {c.company_name}
                         </Link>
+                        {!c.is_active && (
+                          <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                            停用
+                          </span>
+                        )}
                         {q && c.parent_id && (
                           <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                             子公司

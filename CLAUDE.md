@@ -4,6 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @AGENTS.md
 
+## Business Context
+
+Internal tool for managing SuiteApp sales (NetSuite add-ons sold annually to clients). Core workflow:
+1. Issue quote → client signs → issue invoice → client pays
+2. After payment, auto-generate commission schedule for GW company (fixed partner)
+
+Problems being solved: contact info scattered in Line, no renewal reminders, documents hard to find in Drive, commission calculations done manually.
+
 ## Commands
 
 ```bash
@@ -13,7 +21,7 @@ npm run start    # Start production server
 npm run lint     # Run ESLint
 ```
 
-Tests use **Vitest** (not yet configured — add `vitest.config.ts` before writing tests). Commission calculation logic is a priority for unit testing.
+Tests use **Vitest** (`vitest.config.ts` is configured, `npm test` runs 24 tests). Commission calculation logic is the priority for unit testing.
 
 ## Architecture
 
@@ -74,9 +82,55 @@ The system stores Google Drive links in the database rather than file contents.
 
 ## Document Generation
 
-- **Quotes:** Generate a filled Excel file (user exports to PDF themselves — system does not produce PDF)
-- **Contracts:** Clone a Google Docs template and fill variables: 甲方公司名稱, 甲方簽名人, 金額, 訂閱期間
+- **Quotes:** Generate a filled Excel file → user exports to PDF themselves (system does not produce PDF)
+- **Contracts:** Clone a Google Docs template → fill variables → save to Google Drive under `業務系統/{CustomerName}/{YYYY}/合約/`
+
+Quote Excel variables:
+- Quote number, quote date, expiry date
+- 乙方（英薩吉）: contact, email, address, 統一編號
+- 甲方（客戶）: company name, 統一編號, contact, email, address
+- Line items: 項次 / 項目名稱 / 數量 / 單位 / 單價 / 小計
+- 未稅總計, 稅額 (5%), 含稅總計
+
+Contract Google Doc variables: 甲方公司名稱, 甲方簽名人, 金額, 訂閱期間
+
+## Document Upload Flow
+
+Users upload invoice scans and other documents through the system. The system uploads them to Google Drive under the correct folder (`業務系統/{CustomerName}/{YYYY}/發票/` etc.) and saves only the Drive link in the `documents` table. File contents are never stored in the database.
 
 ## Reminder System
 
-Per-customer reminder offset (N months before contract end). Each contract triggers at most one reminder email via Gmail API.
+Per-customer reminder offset (N months before contract end). Each contract triggers at most one reminder email via Resend (not Gmail API). Users configure the offset per customer (not global). System does **not** send invoice emails — staff handles that manually.
+
+Reminder endpoint: `GET /api/send-reminders?secret=REMINDER_SECRET`
+- Add `&force=1` to bypass `reminder_sent_at` check (for testing)
+- Add `&debug=1` to see why each order was skipped
+
+## Development Progress
+
+### ✅ Completed
+
+| Module | Notes |
+|--------|-------|
+| DB Schema | `supabase/migrations/` — customers, contacts, orders, order_items, commission_schedules, commission_schedule_items |
+| Supabase local env | `supabase/config.toml`, Google OAuth configured |
+| Auth | Google OAuth login only, no roles |
+| Customer management | List (active only by default, toggle to show inactive), create, edit, detail, contacts, subsidiaries |
+| Order management | List, detail, create, edit, status flow (Pending→已開報價單→已開發票→已付款), commission schedule auto-generated on payment |
+| Commission report | `/commissions` — date range filter, grouped by disbursement date, subtotals, grand total. Inactive orders excluded. |
+| Reminder system | `/api/send-reminders` — scans due contracts, sends email via Resend to internal recipient |
+| `is_active` flag | Both customers and orders support soft disable. Inactive orders excluded from commission report. |
+| Document links | Orders have `quote_url`, `contract_url`, `invoice_url` fields (Google Drive links) |
+| Invoice date | Orders have `invoice_date` field; `quote_valid_until` was removed |
+
+### ⚠️ Known Constraints
+
+- **Paid orders lock item editing** — editing order items after payment would cascade-delete `commission_schedule_items` (FK `ON DELETE CASCADE`). The form shows items as read-only and the action skips `saveOrderItems` when `status = paid`.
+- **Email sender** — uses Resend with `inzaghi-corp.com` domain (verified via Gandi DNS). Env var: `GMAIL_SENDER_EMAIL` (kept same name for historical reasons).
+
+### 🔲 Not Yet Built
+
+- Quote generation (Excel)
+- Contract generation (Google Docs clone)
+- Document upload to Google Drive
+- Historical data import

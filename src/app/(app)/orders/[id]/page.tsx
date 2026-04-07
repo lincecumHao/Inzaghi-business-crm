@@ -61,6 +61,9 @@ export default async function OrderDetailPage({
               {!order.is_main_contract && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">加購合約</span>
               )}
+              {!order.is_active && (
+                <span className="text-xs bg-red-50 text-red-400 px-2 py-0.5 rounded-full border border-red-100">停用</span>
+              )}
             </div>
             {customer && (
               <Link href={`/customers/${customer.id}`} className="text-sm text-blue-600 hover:underline">
@@ -78,11 +81,34 @@ export default async function OrderDetailPage({
 
         <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm mt-4">
           <InfoRow label="報價日期" value={order.quote_date} />
-          <InfoRow label="報價有效日期" value={order.quote_valid_until} />
+          <InfoRow label="發票日期" value={order.invoice_date} />
           <InfoRow label="合約開始日" value={order.contract_start_date} />
           <InfoRow label="合約結束日" value={order.contract_end_date} />
           {order.payment_date && <InfoRow label="收款日" value={order.payment_date} />}
         </dl>
+
+        {(order.quote_url || order.contract_url || order.invoice_url) && (
+          <div className="flex items-center gap-3 mt-5 pt-4 border-t border-slate-100">
+            {order.quote_url && (
+              <a href={order.quote_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                <span>📄</span> 報價單
+              </a>
+            )}
+            {order.contract_url && (
+              <a href={order.contract_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                <span>📝</span> 合約
+              </a>
+            )}
+            {order.invoice_url && (
+              <a href={order.invoice_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                <span>🧾</span> 發票
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 項目明細 */}

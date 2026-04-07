@@ -56,10 +56,14 @@ export async function createOrder(formData: FormData) {
       customer_id: formData.get('customer_id') as string,
       quote_number: quoteNumber,
       quote_date: formData.get('quote_date') as string,
-      quote_valid_until: (formData.get('quote_valid_until') as string) || null,
+      invoice_date: (formData.get('invoice_date') as string) || null,
       contract_start_date: (formData.get('contract_start_date') as string) || null,
       contract_end_date: (formData.get('contract_end_date') as string) || null,
       is_main_contract: formData.get('is_main_contract') === 'true',
+      is_active: formData.get('is_active') === 'true',
+      quote_url: (formData.get('quote_url') as string) || null,
+      contract_url: (formData.get('contract_url') as string) || null,
+      invoice_url: (formData.get('invoice_url') as string) || null,
     })
     .select('id')
     .single()
@@ -75,23 +79,34 @@ export async function createOrder(formData: FormData) {
 export async function updateOrder(orderId: string, formData: FormData) {
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('orders')
     .update({
       customer_id: formData.get('customer_id') as string,
       quote_date: formData.get('quote_date') as string,
-      quote_valid_until: (formData.get('quote_valid_until') as string) || null,
+      invoice_date: (formData.get('invoice_date') as string) || null,
       contract_start_date: (formData.get('contract_start_date') as string) || null,
       contract_end_date: (formData.get('contract_end_date') as string) || null,
       is_main_contract: formData.get('is_main_contract') === 'true',
+      is_active: formData.get('is_active') === 'true',
+      quote_url: (formData.get('quote_url') as string) || null,
+      contract_url: (formData.get('contract_url') as string) || null,
+      invoice_url: (formData.get('invoice_url') as string) || null,
     })
     .eq('id', orderId)
+    .select('status')
+    .single()
 
   if (error) throw new Error(error.message)
 
-  await saveOrderItems(supabase, orderId, formData)
+  // 已付款的訂單不重寫 items，避免 cascade delete 刪掉 commission_schedule_items
+  if (updated?.status !== 'paid') {
+    await saveOrderItems(supabase, orderId, formData)
+  }
 
+  revalidatePath('/orders')
   revalidatePath(`/orders/${orderId}`)
+  revalidatePath('/commissions')
 }
 
 // 刪除舊 items 再重新插入（最簡單的做法）
@@ -194,7 +209,7 @@ export async function advanceOrderStatus(orderId: string, currentStatus: string)
           .single()
 
         if (cs) {
-          await supabase.from('commission_schedule_items').insert(
+          const { error: itemsError } = await supabase.from('commission_schedule_items').insert(
             entry.items.map((item) => ({
               commission_schedule_id: cs.id,
               order_item_id: item.orderItemId,
@@ -202,6 +217,7 @@ export async function advanceOrderStatus(orderId: string, currentStatus: string)
               commission_amount: item.commissionAmount,
             }))
           )
+          if (itemsError) throw new Error(`commission_schedule_items insert failed: ${itemsError.message}`)
         }
       }
     }

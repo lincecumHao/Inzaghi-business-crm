@@ -10,6 +10,7 @@ type Props =
 
 export function OrderForm({ mode, order, items, customers }: Props) {
   const [open, setOpen] = useState(false)
+  const isPaid = mode === 'edit' && order.status === 'paid'
   const [rows, setRows] = useState<ItemRow[]>(
     mode === 'edit' && items?.length
       ? items.map((item) => ({
@@ -73,7 +74,7 @@ export function OrderForm({ mode, order, items, customers }: Props) {
                 </div>
 
                 <DateField label="報價日期" name="quote_date" required defaultValue={order?.quote_date} />
-                <DateField label="報價有效日期" name="quote_valid_until" defaultValue={order?.quote_valid_until ?? ''} />
+                <DateField label="發票日期" name="invoice_date" defaultValue={order?.invoice_date ?? ''} />
                 <DateField label="合約開始日" name="contract_start_date" defaultValue={order?.contract_start_date ?? ''} />
                 <DateField label="合約結束日" name="contract_end_date" defaultValue={order?.contract_end_date ?? ''} />
 
@@ -90,15 +91,44 @@ export function OrderForm({ mode, order, items, customers }: Props) {
                     主合約（勾選才有分潤）
                   </label>
                 </div>
+
+                <div className="col-span-2">
+                  <UrlField label="報價單連結" name="quote_url" defaultValue={order?.quote_url ?? ''} />
+                </div>
+                <div className="col-span-2">
+                  <UrlField label="合約連結" name="contract_url" defaultValue={order?.contract_url ?? ''} />
+                </div>
+                <div className="col-span-2">
+                  <UrlField label="發票連結" name="invoice_url" defaultValue={order?.invoice_url ?? ''} />
+                </div>
+
+                <div className="col-span-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    name="is_active"
+                    value="true"
+                    defaultChecked={order ? order.is_active : true}
+                    className="rounded"
+                  />
+                  <label htmlFor="is_active" className="text-sm text-slate-700">
+                    啟用中（取消勾選代表停用）
+                  </label>
+                </div>
               </div>
 
               {/* 項目明細 */}
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-slate-700">項目明細</h3>
-                  <button type="button" onClick={addRow} className="text-xs text-blue-600 hover:underline">
-                    + 新增項目
-                  </button>
+                  {!isPaid && (
+                    <button type="button" onClick={addRow} className="text-xs text-blue-600 hover:underline">
+                      + 新增項目
+                    </button>
+                  )}
+                  {isPaid && (
+                    <span className="text-xs text-slate-400">已付款，項目不可修改</span>
+                  )}
                 </div>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
@@ -116,29 +146,34 @@ export function OrderForm({ mode, order, items, customers }: Props) {
                       {rows.map((row, i) => (
                         <tr key={i}>
                           <td className="px-2 py-1.5">
-                            <input name="item_name" value={row.name} onChange={(e) => updateRow(i, 'name', e.target.value)} required
-                              className="w-full border rounded px-2 py-1 text-xs" />
+                            {isPaid
+                              ? <span className="text-xs text-slate-700">{row.name}</span>
+                              : <input name="item_name" value={row.name} onChange={(e) => updateRow(i, 'name', e.target.value)} required className="w-full border rounded px-2 py-1 text-xs" />}
                           </td>
                           <td className="px-2 py-1.5">
-                            <input name="item_quantity" value={row.quantity} onChange={(e) => updateRow(i, 'quantity', e.target.value)} type="number" min="0.01" step="0.01"
-                              className="w-full border rounded px-2 py-1 text-xs" />
+                            {isPaid
+                              ? <span className="text-xs text-slate-700">{row.quantity}</span>
+                              : <input name="item_quantity" value={row.quantity} onChange={(e) => updateRow(i, 'quantity', e.target.value)} type="number" min="0.01" step="0.01" className="w-full border rounded px-2 py-1 text-xs" />}
                           </td>
                           <td className="px-2 py-1.5">
-                            <input name="item_unit" value={row.unit} onChange={(e) => updateRow(i, 'unit', e.target.value)}
-                              className="w-full border rounded px-2 py-1 text-xs" />
+                            {isPaid
+                              ? <span className="text-xs text-slate-500">{row.unit}</span>
+                              : <input name="item_unit" value={row.unit} onChange={(e) => updateRow(i, 'unit', e.target.value)} className="w-full border rounded px-2 py-1 text-xs" />}
                           </td>
                           <td className="px-2 py-1.5">
-                            <input name="item_unit_price" value={row.unit_price} onChange={(e) => updateRow(i, 'unit_price', e.target.value)} type="number" min="0" step="1"
-                              className="w-full border rounded px-2 py-1 text-xs" />
+                            {isPaid
+                              ? <span className="text-xs text-slate-700">{Number(row.unit_price).toLocaleString()}</span>
+                              : <input name="item_unit_price" value={row.unit_price} onChange={(e) => updateRow(i, 'unit_price', e.target.value)} type="number" min="0" step="1" className="w-full border rounded px-2 py-1 text-xs" />}
                           </td>
                           <td className="px-2 py-1.5 text-center">
                             <input name="item_commissionable" type="checkbox" value="true"
                               checked={row.commissionable}
-                              onChange={(e) => updateRow(i, 'commissionable', e.target.checked)}
+                              disabled={isPaid}
+                              onChange={(e) => !isPaid && updateRow(i, 'commissionable', e.target.checked)}
                               className="rounded" />
                           </td>
                           <td className="px-2 py-1.5 text-center">
-                            {rows.length > 1 && (
+                            {!isPaid && rows.length > 1 && (
                               <button type="button" onClick={() => removeRow(i)}
                                 className="text-slate-300 hover:text-red-500 text-base leading-none">×</button>
                             )}
@@ -181,6 +216,19 @@ function DateField({ label, name, required, defaultValue }: {
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <input type="date" name={name} required={required} defaultValue={defaultValue ?? ''}
+        className="border rounded-lg px-3 py-2 text-sm" />
+    </div>
+  )
+}
+
+function UrlField({ label, name, defaultValue }: {
+  label: string; name: string; defaultValue?: string
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-slate-700">{label}</label>
+      <input type="url" name={name} defaultValue={defaultValue ?? ''}
+        placeholder="https://drive.google.com/..."
         className="border rounded-lg px-3 py-2 text-sm" />
     </div>
   )

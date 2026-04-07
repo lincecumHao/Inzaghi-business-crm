@@ -14,9 +14,10 @@ const STATUS_FILTERS = [
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; inactive?: string }>
 }) {
-  const { status } = await searchParams
+  const { status, inactive } = await searchParams
+  const showInactive = inactive === '1'
   const supabase = await createClient()
 
   let query = supabase
@@ -24,6 +25,7 @@ export default async function OrdersPage({
     .select('*, customer:customers(company_name)')
     .order('created_at', { ascending: false })
 
+  if (!showInactive) query = query.eq('is_active', true)
   if (status) query = query.eq('status', status)
 
   const [{ data: orders }, { data: customers }] = await Promise.all([
@@ -38,21 +40,39 @@ export default async function OrdersPage({
         <OrderForm mode="create" customers={customers ?? []} />
       </div>
 
-      {/* 狀態篩選 */}
-      <div className="flex gap-2 mb-5">
-        {STATUS_FILTERS.map((f) => (
+      {/* 篩選列 */}
+      <div className="flex items-center gap-2 mb-5">
+        {STATUS_FILTERS.map((f) => {
+          const base = f.value ? `/orders?status=${f.value}` : '/orders'
+          const href = showInactive ? `${base}${f.value ? '&' : '?'}inactive=1` : base
+          return (
+            <Link
+              key={f.value}
+              href={href}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                (status ?? '') === f.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {f.label}
+            </Link>
+          )
+        })}
+        <div className="ml-auto">
           <Link
-            key={f.value}
-            href={f.value ? `/orders?status=${f.value}` : '/orders'}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              (status ?? '') === f.value
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            href={showInactive
+              ? (status ? `/orders?status=${status}` : '/orders')
+              : (status ? `/orders?status=${status}&inactive=1` : '/orders?inactive=1')}
+            className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              showInactive
+                ? 'bg-slate-700 text-white border-slate-700'
+                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            {f.label}
+            顯示停用
           </Link>
-        ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -76,10 +96,15 @@ export default async function OrdersPage({
                 return (
                   <tr key={o.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3.5">
-                      <Link href={`/orders/${o.id}`}
-                        className="font-medium text-blue-600 hover:underline font-mono text-xs">
-                        {o.quote_number}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/orders/${o.id}`}
+                          className={`font-medium hover:underline font-mono text-xs ${o.is_active ? 'text-blue-600' : 'text-slate-400'}`}>
+                          {o.quote_number}
+                        </Link>
+                        {!o.is_active && (
+                          <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">停用</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-slate-700">{customer?.company_name ?? '—'}</td>
                     <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>

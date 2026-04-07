@@ -17,6 +17,7 @@ export async function createCustomer(formData: FormData) {
       address: (formData.get('address') as string) || null,
       parent_id: (formData.get('parent_id') as string) || null,
       reminder_months_before: Number(formData.get('reminder_months_before')) || 1,
+      is_active: formData.get('is_active') === 'true',
     })
     .select('id')
     .single()
@@ -37,11 +38,13 @@ export async function updateCustomer(id: string, formData: FormData) {
       address: (formData.get('address') as string) || null,
       parent_id: (formData.get('parent_id') as string) || null,
       reminder_months_before: Number(formData.get('reminder_months_before')) || 1,
+      is_active: formData.get('is_active') === 'true',
     })
     .eq('id', id)
 
   if (error) throw new Error(error.message)
 
+  revalidatePath('/customers')
   revalidatePath(`/customers/${id}`)
 }
 

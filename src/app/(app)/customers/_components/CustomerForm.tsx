@@ -68,6 +68,17 @@ export function CustomerForm({ mode, customer, allCustomers }: Props) {
                     className="border rounded-lg px-3 py-2 text-sm w-24"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    value="true"
+                    defaultChecked={customer ? customer.is_active : true}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600"
+                  />
+                  <span className="text-sm font-medium text-slate-700">啟用中（取消勾選代表停用）</span>
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
