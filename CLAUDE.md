@@ -4,6 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @AGENTS.md
 
+## Communication Language
+
+Always respond in **Traditional Chinese (繁體中文)** or **English**. Do not use Simplified Chinese, Japanese, Korean, or any other language.
+
 ## Business Context
 
 Internal tool for managing SuiteApp sales (NetSuite add-ons sold annually to clients). Core workflow:
